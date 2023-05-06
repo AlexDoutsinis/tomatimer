@@ -13,30 +13,34 @@ const projects = [
     {
         name: 'Project 1',
         description: 'This is Project 1',
-        analytics: { intervals: 0, minutes: 0 },
+        analytics: { intervals: 0, minutes: 0, lastUpdated: null },
         tasks: [
-            { name: 'Task 1.1', analytics: { intervals: 0, minutes: 0 } },
-            { name: 'Task 1.2', analytics: { intervals: 0, minutes: 0 } },
-            { name: 'Task 1.3', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 1.1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 1.2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 1.3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
         ],
     },
     {
         name: 'Project 2',
         description: 'This is Project 2',
-        analytics: { intervals: 0, minutes: 0 },
+        analytics: { intervals: 0, minutes: 0, lastUpdated: null },
         tasks: [
-            { name: 'Task 2.1', analytics: { intervals: 0, minutes: 0 } },
-            { name: 'Task 2.2', analytics: { intervals: 0, minutes: 0 } },
-            { name: 'Task 2.3', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 2.1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 2.2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 2.3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
         ],
     },
 ];
 
 const individualTasks = [
-    { name: 'Individual Task 1', analytics: { intervals: 0, minutes: 0 } },
-    { name: 'Individual Task 2', analytics: { intervals: 0, minutes: 0 } },
-    { name: 'Individual Task 3', analytics: { intervals: 0, minutes: 0 } },
+    { name: 'Individual Task 1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+    { name: 'Individual Task 2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+    { name: 'Individual Task 3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
 ];
+
+function getTimezone() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 
 async function promptProjectAndTasks() {
     const action = await new Select({
@@ -126,18 +130,25 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     let intervalCount = 0;
 
     const updateAnalytics = (elapsedMinutes) => {
+        const currentTime = new Date();
+        const timezone = getTimezone();
+
         if (projectName) {
             const project = projects.find((project) => project.name === projectName);
             const task = project.tasks.find((task) => task.name === selectedTask);
+
             task.analytics.intervals += 1;
             task.analytics.minutes += elapsedMinutes;
+            task.analytics.lastUpdated = { date: currentTime, timezone: timezone };
 
             project.analytics.intervals += 1;
             project.analytics.minutes += elapsedMinutes;
+            project.analytics.lastUpdated = { date: currentTime, timezone: timezone };
         } else {
             const task = individualTasks.find((task) => task.name === selectedTask);
             task.analytics.intervals += 1;
             task.analytics.minutes += elapsedMinutes;
+            task.analytics.lastUpdated = { date: currentTime, timezone: timezone };
         }
     };
 
@@ -237,5 +248,4 @@ izicli.command({
 
 izicli.parse(process.argv);
 
-// add date and time to analytics
 // integrate Notion
