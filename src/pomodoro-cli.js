@@ -2,9 +2,18 @@ import izicli from 'izicli';
 import ansiEscapes from 'ansi-escapes';
 import ansiColors from 'ansi-colors';
 import figures from 'figures';
+import notifier from 'node-notifier';
 
 const {circleDotted} = figures
 const {bold, red, green, gray} = ansiColors
+
+function sendNotification(title, message) {
+  notifier.notify({
+    title: title,
+    message: message,
+    sound: true,
+  });
+}
 
 function drawProgressBar(progress, width) {
   const completed = Math.round(progress * width);
@@ -21,8 +30,10 @@ async function pomodoro(workDuration = 25, breakDuration = 5) {
   while (true) {
     console.log(red(`\nWork for ${workDuration} minutes.`));
     await timer(workMillis);
+    sendNotification('Pomodoro Timer', 'Work time has ended. Time for a break!');
     console.log(green(`\nBreak for ${breakDuration} minutes.`));
     await timer(breakMillis);
+    sendNotification('Pomodoro Timer', 'Break time has ended. Time to get back to work!');
   }
 }
 
