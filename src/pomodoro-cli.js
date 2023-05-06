@@ -99,24 +99,33 @@ function sendNotification(title, message) {
 function drawProgressBar(progress, width) {
     const completed = Math.round(progress * width);
     const remaining = width - completed;
-    const completedStr = bold(green(`${circleDotted}`)).repeat(completed);
+    const completedStr = bold(cyan(`${circleDotted}`)).repeat(completed);
     const remainingStr = gray(`${circleDotted}`).repeat(remaining);
     process.stdout.write(ansiEscapes.cursorLeft + completedStr + remainingStr);
 }
 
-async function pomodoro(workDuration = 25, breakDuration = 5) {
+async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     const { projectName, selectedTask } = await promptProjectAndTasks();
 
     const workMillis = workDuration * 60 * 1000;
     const breakMillis = breakDuration * 60 * 1000;
+    let intervalCount = 0;
 
     while (true) {
+        intervalCount += 1;
         const workMessage = projectName
             ? `Let's focus on the ${bold(cyan(projectName))} project, specifically the ${bold(yellow(selectedTask))} task for the next ${bold(magenta(workDuration))} minutes.`
             : `Time to concentrate on the ${bold(yellow(selectedTask))} task for ${bold(magenta(workDuration))} minutes.`;
         console.log(red(`\n${workMessage}`));
         await timer(workMillis);
         sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
+        
+        if (intervals > 0 && intervalCount >= intervals) {
+            console.log(green(`\nYou have completed the desired number of intervals!`));
+            sendNotification('Pomodoro Timer', `Congratulations! You've successfully completed ${intervals} intervals. Keep up the good work!`);
+            break;
+        }
+
         console.log(green(`\nTake a ${breakDuration}-minute break to recharge.`));
         await timer(breakMillis);
         sendNotification('Pomodoro Timer', `Break time is over. Let's get back to work and make progress!`);
@@ -159,14 +168,19 @@ izicli.command({
             isRequired: false,
             valueIsRequired: true,
         },
+        {
+            name: { full: 'intervals', short: 'i' },
+            description: 'Number of intervals to complete',
+            isRequired: false,
+            valueIsRequired: true,
+        },
     ])
-    .action(({ work: workDuration, break: breakDuration }) => {
-        pomodoro(workDuration, breakDuration);
+    .action(({ work: workDuration, break: breakDuration, intervals }) => {
+        pomodoro(workDuration, breakDuration, intervals);
     });
 
 izicli.parse(process.argv);
 
-// allow users to provide the number of intervals
 // add key bindings for pausing or ending the session
 // store analytics
 // integrate Notion
