@@ -13,28 +13,42 @@ const projects = [
     {
         name: 'Project 1',
         description: 'This is Project 1',
-        tasks: ['Task 1.1', 'Task 1.2', 'Task 1.3'],
+        analytics: { intervals: 0, minutes: 0 },
+        tasks: [
+            { name: 'Task 1.1', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 1.2', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 1.3', analytics: { intervals: 0, minutes: 0 } },
+        ],
     },
     {
         name: 'Project 2',
         description: 'This is Project 2',
-        tasks: ['Task 2.1', 'Task 2.2', 'Task 2.3'],
+        analytics: { intervals: 0, minutes: 0 },
+        tasks: [
+            { name: 'Task 2.1', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 2.2', analytics: { intervals: 0, minutes: 0 } },
+            { name: 'Task 2.3', analytics: { intervals: 0, minutes: 0 } },
+        ],
     },
 ];
 
-const individualTasks = ['Individual Task 1', 'Individual Task 2', 'Individual Task 3'];
+const individualTasks = [
+    { name: 'Individual Task 1', analytics: { intervals: 0, minutes: 0 } },
+    { name: 'Individual Task 2', analytics: { intervals: 0, minutes: 0 } },
+    { name: 'Individual Task 3', analytics: { intervals: 0, minutes: 0 } },
+];
 
 async function promptProjectAndTasks() {
     const action = await new Select({
-    name: 'action',
-    message: 'What would you like to do?',
-    choices: [
-        'Select an existing project',
-        'Create a new project',
-        'Select an individual task',
-        'Create a new individual task',
-    ],
-}).run();
+        name: 'action',
+        message: 'What would you like to do?',
+        choices: [
+            'Select an existing project',
+            'Create a new project',
+            'Select an individual task',
+            'Create a new individual task',
+        ],
+    }).run();
 
     let projectName;
     let selectedTask;
@@ -85,7 +99,7 @@ async function promptProjectAndTasks() {
         selectedTask = newTask.name;
     }
 
-    return {projectName, selectedTask}
+    return { projectName, selectedTask }
 }
 
 function sendNotification(title, message) {
@@ -111,15 +125,46 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     const breakMillis = breakDuration * 60 * 1000;
     let intervalCount = 0;
 
+    const updateAnalytics = (elapsedMinutes) => {
+        if (projectName) {
+            const project = projects.find((project) => project.name === projectName);
+            const task = project.tasks.find((task) => task.name === selectedTask);
+            task.analytics.intervals += 1;
+            task.analytics.minutes += elapsedMinutes;
+
+            project.analytics.intervals += 1;
+            project.analytics.minutes += elapsedMinutes;
+        } else {
+            const task = individualTasks.find((task) => task.name === selectedTask);
+            task.analytics.intervals += 1;
+            task.analytics.minutes += elapsedMinutes;
+        }
+    };
+
     while (true) {
         intervalCount += 1;
         const workMessage = projectName
             ? `Let's focus on the ${bold(cyan(projectName))} project, specifically the ${bold(yellow(selectedTask))} task for the next ${bold(magenta(workDuration))} minutes.`
             : `Time to concentrate on the ${bold(yellow(selectedTask))} task for ${bold(magenta(workDuration))} minutes.`;
         console.log(red(`\n${workMessage}`));
-        await timer(workMillis);
+        await timer(workMillis, updateAnalytics);
+
+        if (projectName) {
+            const project = projects.find((project) => project.name === projectName);
+            const task = project.tasks.find((task) => task.name === selectedTask);
+            task.analytics.intervals += 1;
+            task.analytics.minutes += workDuration;
+
+            project.analytics.intervals += 1;
+            project.analytics.minutes += workDuration;
+        } else {
+            const task = individualTasks.find((task) => task.name === selectedTask);
+            task.analytics.intervals += 1;
+            task.analytics.minutes += workDuration;
+        }
+
         sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
-        
+
         if (intervals > 0 && intervalCount >= intervals) {
             console.log(green(`\nYou have completed the desired number of intervals!`));
             sendNotification('Pomodoro Timer', `Congratulations! You've successfully completed ${intervals} intervals. Keep up the good work!`);
@@ -132,7 +177,7 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     }
 }
 
-function timer(duration) {
+function timer(duration, updateAnalytics = null) {
     return new Promise(resolve => {
         let elapsed = 0;
         const interval = 100;
@@ -147,6 +192,17 @@ function timer(duration) {
                 resolve();
             }
         }, interval);
+
+        process.on('SIGINT', () => {
+            clearInterval(intervalId);
+
+            if (updateAnalytics) {
+                const elapsedMinutes = Math.floor(elapsed / (60 * 1000));
+                updateAnalytics(elapsedMinutes);
+            }
+
+            process.exit();
+        });
     });
 }
 
@@ -181,6 +237,5 @@ izicli.command({
 
 izicli.parse(process.argv);
 
-// add key bindings for pausing or ending the session
-// store analytics
+// add date and time to analytics
 // integrate Notion
