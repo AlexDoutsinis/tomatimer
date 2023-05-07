@@ -7,36 +7,45 @@ import inquirer from 'enquirer';
 
 const { circleDotted } = figures
 const { bold, red, green, gray, cyan, yellow, magenta } = ansiColors
-const { Select, Form } = inquirer
+const { Select, Form, Input } = inquirer
 
 const projects = [
     {
         name: 'Project 1',
         description: 'This is Project 1',
-        analytics: { intervals: 0, minutes: 0, lastUpdated: null },
+        intervals: 0, minutes: 0, lastUpdated: null,
         tasks: [
-            { name: 'Task 1.1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-            { name: 'Task 1.2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-            { name: 'Task 1.3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 1.1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+            { name: 'Task 1.2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+            { name: 'Task 1.3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
         ],
     },
     {
         name: 'Project 2',
         description: 'This is Project 2',
-        analytics: { intervals: 0, minutes: 0, lastUpdated: null },
+        intervals: 0, minutes: 0, lastUpdated: null,
         tasks: [
-            { name: 'Task 2.1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-            { name: 'Task 2.2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-            { name: 'Task 2.3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+            { name: 'Task 2.1', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
+            { name: 'Task 2.2', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
+            { name: 'Task 2.3', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
         ],
     },
 ];
 
 const individualTasks = [
-    { name: 'Individual Task 1', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-    { name: 'Individual Task 2', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
-    { name: 'Individual Task 3', analytics: { intervals: 0, minutes: 0, lastUpdated: null } },
+    { name: 'Individual Task 1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+    { name: 'Individual Task 2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+    { name: 'Individual Task 3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
 ];
+
+async function promptNote() {
+    const response = await new Input({
+        name: 'note',
+        message: 'Describe what you accomplished during this interval (press Enter to skip):',
+    }).run();
+
+    return response;
+}
 
 function getTimezone() {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -130,25 +139,25 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     let intervalCount = 0;
 
     const updateAnalytics = (elapsedMinutes) => {
-        const currentTime = new Date();
+        const timestamp = new Date();
         const timezone = getTimezone();
 
         if (projectName) {
             const project = projects.find((project) => project.name === projectName);
             const task = project.tasks.find((task) => task.name === selectedTask);
 
-            task.analytics.intervals += 1;
-            task.analytics.minutes += elapsedMinutes;
-            task.analytics.lastUpdated = { date: currentTime, timezone: timezone };
+            task.intervals += 1;
+            task.minutes += elapsedMinutes;
+            task.lastUpdated = { timestamp, timezone: timezone };
 
-            project.analytics.intervals += 1;
-            project.analytics.minutes += elapsedMinutes;
-            project.analytics.lastUpdated = { date: currentTime, timezone: timezone };
+            project.intervals += 1;
+            project.minutes += elapsedMinutes;
+            project.lastUpdated = { timestamp, timezone: timezone };
         } else {
             const task = individualTasks.find((task) => task.name === selectedTask);
-            task.analytics.intervals += 1;
-            task.analytics.minutes += elapsedMinutes;
-            task.analytics.lastUpdated = { date: currentTime, timezone: timezone };
+            task.intervals += 1;
+            task.minutes += elapsedMinutes;
+            task.lastUpdated = { timestamp, timezone: timezone };
         }
     };
 
@@ -163,15 +172,15 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
         if (projectName) {
             const project = projects.find((project) => project.name === projectName);
             const task = project.tasks.find((task) => task.name === selectedTask);
-            task.analytics.intervals += 1;
-            task.analytics.minutes += workDuration;
+            task.intervals += 1;
+            task.minutes += workDuration;
 
-            project.analytics.intervals += 1;
-            project.analytics.minutes += workDuration;
+            project.intervals += 1;
+            project.minutes += workDuration;
         } else {
             const task = individualTasks.find((task) => task.name === selectedTask);
-            task.analytics.intervals += 1;
-            task.analytics.minutes += workDuration;
+            task.intervals += 1;
+            task.minutes += workDuration;
         }
 
         sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
@@ -193,13 +202,30 @@ function timer(duration, updateAnalytics = null) {
         let elapsed = 0;
         const interval = 100;
 
-        const intervalId = setInterval(() => {
+        const intervalId = setInterval(async () => {
             elapsed += interval;
             const progress = elapsed / duration;
             drawProgressBar(progress, 50);
 
             if (elapsed >= duration) {
                 clearInterval(intervalId);
+
+                const note = await promptNote();
+                if (note.trim() !== '') {
+
+                    const timestamp = new Date();
+                    const timezone = getTimezone();
+
+                    if (projectName) {
+                        const project = projects.find((project) => project.name === projectName);
+                        const task = project.tasks.find((task) => task.name === selectedTask);
+                        task.log.push({ note, timestamp, timezone });
+                    } else {
+                        const task = individualTasks.find((task) => task.name === selectedTask);
+                        task.log.push({ note, timestamp, timezone });
+                    }
+                }
+
                 resolve();
             }
         }, interval);
