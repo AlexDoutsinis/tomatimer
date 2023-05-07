@@ -195,7 +195,7 @@ async function promptProjectAndTasks() {
             ],
         }).run();
 
-        console.log(`Project: ${projectForm.name}\nDescription: ${projectForm.description}`);
+        console.log(`\nProject: ${projectForm.name}\nDescription: ${projectForm.description}`);
     } else if (action === 'Select an individual task') {
         const task = await new Select({
             name: 'tasks',
@@ -266,6 +266,9 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
 
     while (true) {
         intervalCount += 1;
+
+        process.stdout.write(ansiEscapes.clearScreen + ansiEscapes.cursorTo(0, 0));
+        
         const workMessage = projectName
             ? `Let's focus on the ${bold(cyan(projectName))} project, specifically the ${bold(yellow(selectedTask))} task for the next ${workDuration} minutes.`
             : `Time to concentrate on the ${bold(yellow(selectedTask))} task for ${workDuration} minutes.`;
@@ -312,6 +315,8 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
 
             if (elapsed >= duration) {
                 clearInterval(intervalId);
+
+                process.stdout.write(ansiEscapes.eraseLine + ansiEscapes.cursorLeft);
 
                 if (isWork) {
                     const note = await promptNote();
