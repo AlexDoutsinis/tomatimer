@@ -174,7 +174,7 @@ async function promptProjectAndTasks() {
         }).run();
 
         displayProject(projectToDisplay);
-        return promptProjectAndTasks();
+        process.exit();
     }
     else if (action === 'Display an individual task') {
         const taskToDisplay = await new Select({
@@ -184,7 +184,7 @@ async function promptProjectAndTasks() {
         }).run();
 
         displayIndividualTask(taskToDisplay);
-        return promptProjectAndTasks();
+        process.exit();
     }
     else if (action === 'Select an existing project') {
         const projectChoices = projects.map((project) => project.name);
