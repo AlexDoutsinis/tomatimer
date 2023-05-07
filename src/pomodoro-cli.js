@@ -4,6 +4,7 @@ import ansiColors from 'ansi-colors';
 import figures from 'figures';
 import notifier from 'node-notifier';
 import inquirer from 'enquirer';
+import Table from 'cli-table3';
 
 const { circleDotted } = figures
 const { bold, red, green, gray, cyan, yellow } = ansiColors
@@ -25,9 +26,9 @@ const projects = [
         description: 'This is Project 2',
         intervals: 0, minutes: 0, lastUpdated: null,
         tasks: [
-            { name: 'Task 2.1', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
-            { name: 'Task 2.2', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
-            { name: 'Task 2.3', intervals: 0, minutes: 0, lastUpdated: null , log: [] },
+            { name: 'Task 2.1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+            { name: 'Task 2.2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
+            { name: 'Task 2.3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
         ],
     },
 ];
@@ -37,6 +38,86 @@ const individualTasks = [
     { name: 'Individual Task 2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
     { name: 'Individual Task 3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
 ];
+
+function displayProject(projectName) {
+    const project = projects.find((p) => p.name === projectName);
+
+    console.log(`\nProject: ${project.name}`);
+    console.log(`Description: ${project.description}`);
+    console.log(`Total Intervals: ${project.intervals}`);
+    console.log(`Total Minutes: ${project.minutes}`);
+    console.log(`Last Updated: ${project.lastUpdated
+        ? `${project.lastUpdated.timestamp.toLocaleString()} (${project.lastUpdated.timezone})`
+        : 'N/A'
+        }\n`);
+
+    console.log(`Tasks:`);
+    project.tasks.forEach((task, index) => {
+        const table = new Table({
+            head: ['Task', 'Intervals', 'Minutes', 'Last Updated'],
+            colWidths: [30, 15, 15, 30],
+            style: { head: ['cyan'] },
+        });
+
+        table.push([
+            task.name,
+            task.intervals,
+            task.minutes,
+            task.lastUpdated
+                ? `${task.lastUpdated.timestamp.toLocaleString()} (${task.lastUpdated.timezone})`
+                : 'N/A',
+        ]);
+
+        console.log(table.toString());
+
+        if (task.log.length > 0) {
+            console.log(`    Logs:`);
+            task.log.forEach((log, logIndex) => {
+                console.log(`      ${logIndex + 1}. ${log.note} (${log.timestamp.toLocaleString()} ${log.timezone})`);
+            });
+        } else {
+            console.log(`    Logs: N/A`);
+        }
+
+        console.log();
+    });
+}
+
+function displayIndividualTask(taskName) {
+    const task = individualTasks.find((t) => t.name === taskName);
+
+    console.log();
+
+    const table = new Table({
+        head: ['Task Name', 'Intervals', 'Minutes', 'Last Updated'],
+        colWidths: [30, 15, 15, 30],
+        style: { head: ['cyan'] },
+    });
+
+    const lastUpdated = task.lastUpdated
+        ? `${task.lastUpdated.timestamp.toLocaleString()} (${task.lastUpdated.timezone})`
+        : 'N/A';
+
+    table.push([
+        task.name,
+        task.intervals,
+        task.minutes,
+        lastUpdated,
+    ]);
+
+    console.log(table.toString());
+
+    if (task.log.length > 0) {
+        console.log(`Logs:`);
+        task.log.forEach((log, index) => {
+            console.log(`  ${index + 1}. ${log.note} (${log.timestamp.toLocaleString()} ${log.timezone})`);
+        });
+    } else {
+        console.log(`Logs: N/A`);
+    }
+
+    console.log();
+}
 
 async function promptNote() {
     const response = await new Input({
@@ -60,13 +141,35 @@ async function promptProjectAndTasks() {
             'Create a new project',
             'Select an individual task',
             'Create a new individual task',
+            'Display a project and its tasks',
+            'Display an individual task',
         ],
     }).run();
 
     let projectName;
     let selectedTask;
 
-    if (action === 'Select an existing project') {
+    if (action === 'Display a project and its tasks') {
+        const projectToDisplay = await new Select({
+            name: 'project',
+            message: 'Choose a project to display:',
+            choices: projects.map((project) => project.name),
+        }).run();
+
+        displayProject(projectToDisplay);
+        return promptProjectAndTasks();
+    }
+    else if (action === 'Display an individual task') {
+        const taskToDisplay = await new Select({
+            name: 'tasks',
+            message: 'Select an individual task to display:',
+            choices: individualTasks.map((task) => task.name),
+        }).run();
+
+        displayIndividualTask(taskToDisplay);
+        return promptProjectAndTasks();
+    }
+    else if (action === 'Select an existing project') {
         const projectChoices = projects.map((project) => project.name);
         projectName = await new Select({
             name: 'project',
@@ -198,7 +301,7 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
 }
 
 function timer(duration, updateAnalytics = null, projectName, selectedTask, isWork) {
-    return new Promise(resolve => {
+    return new Promise(async (resolve, reject) => {
         let elapsed = 0;
         const interval = 100;
 
@@ -213,7 +316,6 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
                 if (isWork) {
                     const note = await promptNote();
                     if (note.trim() !== '') {
-
                         const timestamp = new Date();
                         const timezone = getTimezone();
 
@@ -240,9 +342,9 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
                 updateAnalytics(elapsedMinutes);
             }
 
-            process.exit();
+            reject('SIGINT');
         });
-    });
+    })
 }
 
 izicli.version('1.0.0');
@@ -270,10 +372,16 @@ izicli.command({
             valueIsRequired: true,
         },
     ])
-    .action(({ work: workDuration, break: breakDuration, intervals }) => {
-        pomodoro(workDuration, breakDuration, intervals);
+    .action(async ({ work: workDuration, break: breakDuration, intervals }) => {
+        try {
+            await pomodoro(workDuration, breakDuration, intervals);
+        } catch (error) {
+            if (error === 'SIGINT') {
+                process.exit();
+            } else {
+                process.exit();
+            }
+        }
     });
 
 izicli.parse(process.argv);
-
-// integrate Notion
