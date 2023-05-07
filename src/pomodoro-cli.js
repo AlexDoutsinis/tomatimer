@@ -6,7 +6,7 @@ import notifier from 'node-notifier';
 import inquirer from 'enquirer';
 
 const { circleDotted } = figures
-const { bold, red, green, gray, cyan, yellow, magenta } = ansiColors
+const { bold, red, green, gray, cyan, yellow } = ansiColors
 const { Select, Form, Input } = inquirer
 
 const projects = [
@@ -138,7 +138,7 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     const breakMillis = breakDuration * 60 * 1000;
     let intervalCount = 0;
 
-    const updateAnalytics = (elapsedMinutes) => {
+    const updateAnalytics = (elapsedMinutes, projectName, selectedTask) => {
         const timestamp = new Date();
         const timezone = getTimezone();
 
@@ -164,10 +164,10 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
     while (true) {
         intervalCount += 1;
         const workMessage = projectName
-            ? `Let's focus on the ${bold(cyan(projectName))} project, specifically the ${bold(yellow(selectedTask))} task for the next ${bold(magenta(workDuration))} minutes.`
-            : `Time to concentrate on the ${bold(yellow(selectedTask))} task for ${bold(magenta(workDuration))} minutes.`;
-        console.log(red(`\n${workMessage}`));
-        await timer(workMillis, updateAnalytics);
+            ? `Let's focus on the ${bold(cyan(projectName))} project, specifically the ${bold(yellow(selectedTask))} task for the next ${workDuration} minutes.`
+            : `Time to concentrate on the ${bold(yellow(selectedTask))} task for ${workDuration} minutes.`;
+        console.log(red(`\nInterval ${intervalCount}: ${workMessage}`));
+        await timer(workMillis, updateAnalytics, projectName, selectedTask, true);
 
         if (projectName) {
             const project = projects.find((project) => project.name === projectName);
@@ -192,12 +192,12 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
         }
 
         console.log(green(`\nTake a ${breakDuration}-minute break to recharge.`));
-        await timer(breakMillis);
+        await timer(breakMillis, null, projectName, selectedTask, false);
         sendNotification('Pomodoro Timer', `Break time is over. Let's get back to work and make progress!`);
     }
 }
 
-function timer(duration, updateAnalytics = null) {
+function timer(duration, updateAnalytics = null, projectName, selectedTask, isWork) {
     return new Promise(resolve => {
         let elapsed = 0;
         const interval = 100;
@@ -210,19 +210,21 @@ function timer(duration, updateAnalytics = null) {
             if (elapsed >= duration) {
                 clearInterval(intervalId);
 
-                const note = await promptNote();
-                if (note.trim() !== '') {
+                if (isWork) {
+                    const note = await promptNote();
+                    if (note.trim() !== '') {
 
-                    const timestamp = new Date();
-                    const timezone = getTimezone();
+                        const timestamp = new Date();
+                        const timezone = getTimezone();
 
-                    if (projectName) {
-                        const project = projects.find((project) => project.name === projectName);
-                        const task = project.tasks.find((task) => task.name === selectedTask);
-                        task.log.push({ note, timestamp, timezone });
-                    } else {
-                        const task = individualTasks.find((task) => task.name === selectedTask);
-                        task.log.push({ note, timestamp, timezone });
+                        if (projectName) {
+                            const project = projects.find((project) => project.name === projectName);
+                            const task = project.tasks.find((task) => task.name === selectedTask);
+                            task.log.push({ note, timestamp, timezone });
+                        } else {
+                            const task = individualTasks.find((task) => task.name === selectedTask);
+                            task.log.push({ note, timestamp, timezone });
+                        }
                     }
                 }
 
