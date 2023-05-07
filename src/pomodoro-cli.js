@@ -5,39 +5,56 @@ import figures from 'figures';
 import notifier from 'node-notifier';
 import inquirer from 'enquirer';
 import Table from 'cli-table3';
+import fs from 'fs';
+import path from 'path';
 
 const { circleDotted } = figures
 const { bold, red, green, gray, cyan, yellow } = ansiColors
 const { Select, Form, Input } = inquirer
 
-const projects = [
-    {
-        name: 'Project 1',
-        description: 'This is Project 1',
-        intervals: 0, minutes: 0, lastUpdated: null,
-        tasks: [
-            { name: 'Task 1.1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-            { name: 'Task 1.2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-            { name: 'Task 1.3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-        ],
-    },
-    {
-        name: 'Project 2',
-        description: 'This is Project 2',
-        intervals: 0, minutes: 0, lastUpdated: null,
-        tasks: [
-            { name: 'Task 2.1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-            { name: 'Task 2.2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-            { name: 'Task 2.3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-        ],
-    },
-];
+const dataFile = path.join(process.cwd(), 'pomodoro-cli.data.json');
 
-const individualTasks = [
-    { name: 'Individual Task 1', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-    { name: 'Individual Task 2', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-    { name: 'Individual Task 3', intervals: 0, minutes: 0, lastUpdated: null, log: [] },
-];
+async function readDataFromFile() {
+    return new Promise((resolve, reject) => {
+        fs.readFile(dataFile, 'utf8', (error, data) => {
+            if (error) {
+                if (error.code === 'ENOENT') {
+                    const defaultData = {
+                        projects: [],
+                        individualTasks: [],
+                    };
+                    fs.writeFile(dataFile, JSON.stringify(defaultData), 'utf8', (writeError) => {
+                        if (writeError) {
+                            reject(`Error creating data file: ${writeError.message}`);
+                        } else {
+                            resolve(defaultData);
+                        }
+                    });
+                } else {
+                    reject(`Error reading data from file: ${error.message}`);
+                }
+            } else {
+                try {
+                    const jsonData = JSON.parse(data);
+                    resolve(jsonData);
+                } catch (parseError) {
+                    reject(`Error parsing JSON data: ${parseError.message}`);
+                }
+            }
+        });
+    });
+}
+
+function writeDataToFile(data) {
+    try {
+        const jsonData = JSON.stringify(data, null, 2);
+        fs.writeFileSync(dataFile, jsonData, 'utf8');
+    } catch (err) {
+        console.error('Error writing data to file:', err);
+    }
+}
+
+const { projects, individualTasks } = await readDataFromFile();
 
 function displayProject(projectName) {
     const project = projects.find((p) => p.name === projectName);
@@ -203,8 +220,10 @@ async function promptProjectAndTasks() {
             lastUpdated: null,
             tasks: [],
         };
-
+        
         projects.push(newProject);
+
+        writeDataToFile({ projects, individualTasks });
 
         console.log(`\nProject: ${projectForm.name}\nDescription: ${projectForm.description}`);
 
@@ -221,6 +240,7 @@ async function promptProjectAndTasks() {
             lastUpdated: null,
             log: [],
         });
+        writeDataToFile({ projects, individualTasks });
 
         projectName = newProject.name;
         selectedTask = newTask.name;
@@ -240,6 +260,7 @@ async function promptProjectAndTasks() {
         }).run();
 
         individualTasks.push(newTask.name);
+        writeDataToFile({ projects, individualTasks });
         selectedTask = newTask.name;
     }
 
@@ -290,6 +311,8 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
             task.minutes += elapsedMinutes;
             task.lastUpdated = { timestamp, timezone: timezone };
         }
+
+        writeDataToFile({ projects, individualTasks });
     };
 
     while (true) {
