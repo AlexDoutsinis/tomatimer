@@ -217,7 +217,7 @@ async function promptProjectAndTasks() {
             description: projectForm.description,
             intervals: 0,
             minutes: 0,
-            lastUpdated: null,
+            lastUpdated: {},
             tasks: [],
         };
 
@@ -237,7 +237,7 @@ async function promptProjectAndTasks() {
             name: newTask.name,
             intervals: 0,
             minutes: 0,
-            lastUpdated: null,
+            lastUpdated: {},
             log: [],
         });
         writeDataToFile({ projects, individualTasks });
@@ -264,7 +264,7 @@ async function promptProjectAndTasks() {
             name: newTask.name,
             intervals: 0,
             minutes: 0,
-            lastUpdated: null,
+            lastUpdated: {},
             log: [],
         });
         writeDataToFile({ projects, individualTasks });
@@ -333,23 +333,7 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
         console.log(red(`\nInterval ${intervalCount}: ${workMessage}`));
         await timer(workMillis, updateAnalytics, projectName, selectedTask, true);
 
-        if (projectName) {
-            const project = projects.find((project) => project.name === projectName);
-            const task = project.tasks.find((task) => task.name === selectedTask);
-            task.intervals += 1;
-            task.minutes += workDuration;
-
-            project.intervals += 1;
-            project.minutes += workDuration;
-        } else {
-            const task = individualTasks.find((task) => task.name === selectedTask);
-            task.intervals += 1;
-            task.minutes += workDuration;
-        }
-
         writeDataToFile({ projects, individualTasks });
-
-        sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
 
         if (intervals > 0 && intervalCount >= intervals) {
             console.log(green(`\nYou have completed the desired number of intervals!`));
@@ -379,6 +363,8 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
                 process.stdout.write(ansiEscapes.eraseLine + ansiEscapes.cursorLeft);
 
                 if (isWork) {
+                    sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
+                    
                     const note = await promptNote();
                     if (note.trim() !== '') {
                         const timestamp = new Date();
@@ -395,20 +381,14 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
                     }
                 }
 
+                if (updateAnalytics) {
+                    const elapsedMinutes = Math.floor(elapsed / (60 * 1000));
+                    updateAnalytics(elapsedMinutes, projectName, selectedTask);
+                }
+
                 resolve();
             }
         }, interval);
-
-        process.on('SIGINT', () => {
-            clearInterval(intervalId);
-
-            if (updateAnalytics) {
-                const elapsedMinutes = Math.floor(elapsed / (60 * 1000));
-                updateAnalytics(elapsedMinutes, projectName, selectedTask);
-            }
-
-            reject('SIGINT');
-        });
     })
 }
 
