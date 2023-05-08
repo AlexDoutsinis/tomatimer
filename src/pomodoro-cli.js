@@ -220,7 +220,7 @@ async function promptProjectAndTasks() {
             lastUpdated: null,
             tasks: [],
         };
-        
+
         projects.push(newProject);
 
         writeDataToFile({ projects, individualTasks });
@@ -245,12 +245,13 @@ async function promptProjectAndTasks() {
         projectName = newProject.name;
         selectedTask = newTask.name;
     } else if (action === 'Select an individual task') {
-        const task = await new Select({
+        const selectedTask = await new Select({
             name: 'tasks',
             message: 'Select an individual task:',
-            choices: individualTasks,
+            choices: individualTasks.map((task) => task.name),
         }).run();
 
+        const task = individualTasks.find((t) => t.name === selectedTask);
         selectedTask = task;
     } else if (action === 'Create a new individual task') {
         const newTask = await new Form({
@@ -259,7 +260,13 @@ async function promptProjectAndTasks() {
             choices: [{ name: 'name', message: 'Task name', initial: 'New Task' }],
         }).run();
 
-        individualTasks.push(newTask.name);
+        individualTasks.push({
+            name: newTask.name,
+            intervals: 0,
+            minutes: 0,
+            lastUpdated: null,
+            log: [],
+        });
         writeDataToFile({ projects, individualTasks });
         selectedTask = newTask.name;
     }
@@ -340,6 +347,8 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
             task.minutes += workDuration;
         }
 
+        writeDataToFile({ projects, individualTasks });
+
         sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
 
         if (intervals > 0 && intervalCount >= intervals) {
@@ -395,7 +404,7 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
 
             if (updateAnalytics) {
                 const elapsedMinutes = Math.floor(elapsed / (60 * 1000));
-                updateAnalytics(elapsedMinutes);
+                updateAnalytics(elapsedMinutes, projectName, selectedTask);
             }
 
             reject('SIGINT');
