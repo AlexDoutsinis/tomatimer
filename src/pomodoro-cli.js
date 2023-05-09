@@ -202,13 +202,38 @@ async function promptProjectAndTasks() {
         }).run();
 
         const selectedProject = projects.find((project) => project.name === projectName);
-        const projectTask = await new Select({
+        const taskAction = await new Select({
             name: 'tasks',
-            message: 'Select a task from the project:',
-            choices: selectedProject.tasks,
+            message: 'Would you like to:',
+            choices: ['Select an existing task', 'Create a new task'],
         }).run();
 
-        selectedTask = projectTask;
+        if (taskAction === 'Select an existing task') {
+            const projectTask = await new Select({
+                name: 'tasks',
+                message: 'Select a task from the project:',
+                choices: selectedProject.tasks.map((task) => task.name),
+            }).run();
+
+            selectedTask = projectTask;
+        } else if (taskAction === 'Create a new task') {
+            const newTask = await new Form({
+                name: 'task',
+                message: 'Enter task details:',
+                choices: [{ name: 'name', message: 'Task name', initial: 'New Task' }],
+            }).run();
+
+            selectedProject.tasks.push({
+                name: newTask.name,
+                intervals: 0,
+                minutes: 0,
+                lastUpdated: null,
+                log: [],
+            });
+            writeDataToFile({ projects, individualTasks });
+
+            selectedTask = newTask.name;
+        }
     } else if (action === 'Create a new project') {
         const projectForm = await new Form({
             name: 'project',
@@ -224,7 +249,7 @@ async function promptProjectAndTasks() {
             description: projectForm.description,
             intervals: 0,
             minutes: 0,
-            lastUpdated: {},
+            lastUpdated: null,
             tasks: [],
         };
 
@@ -244,7 +269,7 @@ async function promptProjectAndTasks() {
             name: newTask.name,
             intervals: 0,
             minutes: 0,
-            lastUpdated: {},
+            lastUpdated: null,
             log: [],
         });
         writeDataToFile({ projects, individualTasks });
@@ -271,7 +296,7 @@ async function promptProjectAndTasks() {
             name: newTask.name,
             intervals: 0,
             minutes: 0,
-            lastUpdated: {},
+            lastUpdated: null,
             log: [],
         });
         writeDataToFile({ projects, individualTasks });
@@ -372,7 +397,7 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
 
                 if (isWork) {
                     sendNotification('Pomodoro Timer', `Great job! You've earned a break. Relax and enjoy!`);
-                    
+
                     const note = await promptNote();
                     if (note.trim() !== '') {
                         const timestamp = new Date();
@@ -432,6 +457,7 @@ izicli.command({
             if (error === 'SIGINT') {
                 process.exit();
             } else {
+                console.log(error)
                 process.exit();
             }
         }
