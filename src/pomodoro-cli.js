@@ -7,12 +7,13 @@ import inquirer from 'enquirer';
 import Table from 'cli-table3';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 const { circleDotted } = figures
 const { bold, red, green, gray, cyan, yellow } = ansiColors
 const { Select, Form, Input } = inquirer
 
-const dataFile = path.join(process.cwd(), 'pomodoro-cli.data.json');
+const dataFile = path.join(os.homedir(), 'pomodoro-cli.data.json');
 
 async function readDataFromFile() {
     return new Promise((resolve, reject) => {
