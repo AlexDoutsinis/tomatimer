@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import izicli from 'izicli';
 import ansiEscapes from 'ansi-escapes';
 import ansiColors from 'ansi-colors';
@@ -13,7 +15,7 @@ const { circleDotted } = figures
 const { bold, red, green, gray, cyan, yellow } = ansiColors
 const { Select, Form, Input } = inquirer
 
-const dataFile = path.join(os.homedir(), 'pomodoro-cli.data.json');
+const dataFile = path.join(os.homedir(), 'tomatime.data.json');
 
 async function readDataFromFile() {
     return new Promise((resolve, reject) => {
@@ -426,7 +428,7 @@ function timer(duration, updateAnalytics = null, projectName, selectedTask, isWo
     })
 }
 
-izicli.version('1.0.0');
+izicli.version('0.0.1');
 izicli.command({
     name: 'pomodoro',
     description: 'Start a Pomodoro timer with work and break durations.',

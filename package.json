@@ -1,14 +1,17 @@
 {
-  "name": "pomodoro",
-  "version": "1.0.0",
+  "name": "tomatime",
+  "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "./src/tomatime.js",
+  "bin": {
+    "tomatime": "./src/tomatime.js"
+  },
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Alex Doutsinis",
   "license": "ISC",
   "dependencies": {
     "ansi-colors": "^4.1.3",
