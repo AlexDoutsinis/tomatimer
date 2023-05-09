@@ -145,6 +145,13 @@ async function promptNote() {
     return response;
 }
 
+async function startNextIntervalPrompt() {
+    await new Input({
+        name: 'nextInterval',
+        message: 'Ready for another productive interval? Just press any key to start!',
+    }).run();
+}
+
 function getTimezone() {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
@@ -344,6 +351,7 @@ async function pomodoro(workDuration = 25, breakDuration = 5, intervals = 0) {
         console.log(green(`\nTake a ${breakDuration}-minute break to recharge.`));
         await timer(breakMillis, null, projectName, selectedTask, false);
         sendNotification('Pomodoro Timer', `Break time is over. Let's get back to work and make progress!`);
+        await startNextIntervalPrompt();
     }
 }
 
